@@ -48,7 +48,8 @@ export default class Carousel extends Component {
         enableMomentum: PropTypes.bool,
         enableSnap: PropTypes.bool,
         firstItem: PropTypes.number,
-        hasParallaxImages: PropTypes.bool,
+				hasParallaxImages: PropTypes.bool,
+				hideCarousel: PropTypes.bool,
         inactiveSlideOpacity: PropTypes.number,
         inactiveSlideScale: PropTypes.number,
         inactiveSlideShift: PropTypes.number,
@@ -92,7 +93,8 @@ export default class Carousel extends Component {
         layout: 'default',
         lockScrollTimeoutDuration: 1000,
         lockScrollWhileSnapping: false,
-        loop: false,
+				loop: false,
+				hideCarousel: true,
         loopClonesPerSide: 3,
         scrollEnabled: true,
         slideStyle: {},
@@ -106,7 +108,7 @@ export default class Carousel extends Component {
         super(props);
 
         this.state = {
-            hideCarousel: true,
+            hideCarousel: props.hideCarousel,
             interpolators: []
         };
 
