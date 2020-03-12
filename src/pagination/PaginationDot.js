@@ -1,144 +1,135 @@
 import React, { PureComponent } from 'react';
-import { View, Animated, Easing, TouchableOpacity, ViewPropTypes } from 'react-native';
-import PropTypes from 'prop-types';
+import { Animated, Easing, TouchableOpacity } from 'react-native';
 import styles from './Pagination.style';
 
 export default class PaginationDot extends PureComponent {
+	constructor(props) {
+		super(props);
+		this.state = {
+			animColor: new Animated.Value(0),
+			animOpacity: new Animated.Value(0),
+			animTransform: new Animated.Value(0)
+		};
+	}
 
-    static propTypes = {
-        inactiveOpacity: PropTypes.number.isRequired,
-        inactiveScale: PropTypes.number.isRequired,
-        active: PropTypes.bool,
-        activeOpacity: PropTypes.number,
-        carouselRef: PropTypes.object,
-        color: PropTypes.string,
-        containerStyle: ViewPropTypes ? ViewPropTypes.style : View.propTypes.style,
-        inactiveColor: PropTypes.string,
-        inactiveStyle: ViewPropTypes ? ViewPropTypes.style : View.propTypes.style,
-        index: PropTypes.number,
-        style: ViewPropTypes ? ViewPropTypes.style : View.propTypes.style,
-        tappable: PropTypes.bool
-    };
+	componentDidMount() {
+		if (this.props.active) {
+			this._animate(1);
+		}
+	}
 
-    constructor (props) {
-        super(props);
-        this.state = {
-            animColor: new Animated.Value(0),
-            animOpacity: new Animated.Value(0),
-            animTransform: new Animated.Value(0)
-        };
-    }
+	componentWillReceiveProps(nextProps) {
+		if (nextProps.active !== this.props.active) {
+			this._animate(nextProps.active ? 1 : 0);
+		}
+	}
 
-    componentDidMount () {
-        if (this.props.active) {
-            this._animate(1);
-        }
-    }
+	_animate(toValue = 0) {
+		const { animColor, animOpacity, animTransform } = this.state;
 
-    componentWillReceiveProps (nextProps) {
-        if (nextProps.active !== this.props.active) {
-            this._animate(nextProps.active ? 1 : 0);
-        }
-    }
+		const commonProperties = {
+			toValue,
+			duration: 250,
+			isInteraction: false,
+			useNativeDriver: !this._shouldAnimateColor
+		};
 
-    _animate (toValue = 0) {
-        const { animColor, animOpacity, animTransform } = this.state;
+		let animations = [
+			Animated.timing(animOpacity, {
+				easing: Easing.linear,
+				...commonProperties
+			}),
+			Animated.spring(animTransform, {
+				friction: 4,
+				tension: 50,
+				...commonProperties
+			})
+		];
 
-        const commonProperties = {
-            toValue,
-            duration: 250,
-            isInteraction: false,
-            useNativeDriver: !this._shouldAnimateColor
-        };
+		if (this._shouldAnimateColor) {
+			animations.push(
+				Animated.timing(animColor, {
+					easing: Easing.linear,
+					...commonProperties
+				})
+			);
+		}
 
-        let animations = [
-            Animated.timing(animOpacity, {
-                easing: Easing.linear,
-                ...commonProperties
-            }),
-            Animated.spring(animTransform, {
-                friction: 4,
-                tension: 50,
-                ...commonProperties
-            })
-        ];
+		Animated.parallel(animations).start();
+	}
 
-        if (this._shouldAnimateColor) {
-            animations.push(Animated.timing(animColor, {
-                easing: Easing.linear,
-                ...commonProperties
-            }));
-        }
+	get _shouldAnimateColor() {
+		const { color, inactiveColor } = this.props;
+		return color && inactiveColor;
+	}
 
-        Animated.parallel(animations).start();
-    }
+	render() {
+		const { animColor, animOpacity, animTransform } = this.state;
+		const {
+			active,
+			activeOpacity,
+			carouselRef,
+			color,
+			containerStyle,
+			inactiveColor,
+			inactiveStyle,
+			inactiveOpacity,
+			inactiveScale,
+			index,
+			style,
+			tappable
+		} = this.props;
 
-    get _shouldAnimateColor () {
-        const { color, inactiveColor } = this.props;
-        return color && inactiveColor;
-    }
+		const animatedStyle = {
+			opacity: animOpacity.interpolate({
+				inputRange: [0, 1],
+				outputRange: [inactiveOpacity, 1]
+			}),
+			transform: [
+				{
+					scale: animTransform.interpolate({
+						inputRange: [0, 1],
+						outputRange: [inactiveScale, 1]
+					})
+				}
+			]
+		};
+		const animatedColor = this._shouldAnimateColor
+			? {
+					backgroundColor: animColor.interpolate({
+						inputRange: [0, 1],
+						outputRange: [inactiveColor, color]
+					})
+			  }
+			: {};
 
-    render () {
-        const { animColor, animOpacity, animTransform } = this.state;
-        const {
-            active,
-            activeOpacity,
-            carouselRef,
-            color,
-            containerStyle,
-            inactiveColor,
-            inactiveStyle,
-            inactiveOpacity,
-            inactiveScale,
-            index,
-            style,
-            tappable
-        } = this.props;
+		const dotContainerStyle = [
+			styles.sliderPaginationDotContainer,
+			containerStyle || {}
+		];
 
-        const animatedStyle = {
-            opacity: animOpacity.interpolate({
-                inputRange: [0, 1],
-                outputRange: [inactiveOpacity, 1]
-            }),
-            transform: [{
-                scale: animTransform.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [inactiveScale, 1]
-                })
-            }]
-        };
-        const animatedColor = this._shouldAnimateColor ? {
-            backgroundColor: animColor.interpolate({
-                inputRange: [0, 1],
-                outputRange: [inactiveColor, color]
-            })
-        } : {};
+		const dotStyle = [
+			styles.sliderPaginationDot,
+			style || {},
+			(!active && inactiveStyle) || {},
+			animatedStyle,
+			animatedColor
+		];
 
-        const dotContainerStyle = [
-            styles.sliderPaginationDotContainer,
-            containerStyle || {}
-        ];
+		const onPress = tappable
+			? () => {
+					carouselRef &&
+						carouselRef._snapToItem(carouselRef._getPositionIndex(index));
+			  }
+			: undefined;
 
-        const dotStyle = [
-            styles.sliderPaginationDot,
-            style || {},
-            (!active && inactiveStyle) || {},
-            animatedStyle,
-            animatedColor
-        ];
-
-        const onPress = tappable ? () => {
-            carouselRef && carouselRef._snapToItem(carouselRef._getPositionIndex(index));
-        } : undefined;
-
-        return (
-            <TouchableOpacity
-              style={dotContainerStyle}
-              activeOpacity={tappable ? activeOpacity : 1}
-              onPress={onPress}
-            >
-                <Animated.View style={dotStyle} />
-            </TouchableOpacity>
-        );
-    }
+		return (
+			<TouchableOpacity
+				style={dotContainerStyle}
+				activeOpacity={tappable ? activeOpacity : 1}
+				onPress={onPress}>
+				<Animated.View style={dotStyle} />
+			</TouchableOpacity>
+		);
+	}
 }
